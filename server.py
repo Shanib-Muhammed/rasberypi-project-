@@ -16,6 +16,7 @@ BASE_DIR = os.path.expanduser("~/roadbot")
 PHOTO_DIR = os.path.join(BASE_DIR, "photos")
 WEB_DIR = os.path.join(BASE_DIR, "web")
 KEY_FILE = os.path.expanduser("~/.roadbot.env")
+LOCATION_FILE = os.path.join(BASE_DIR, "location.json")
 PORT = 8000
 MAX_REPORTS = 100
 
@@ -27,6 +28,32 @@ TYPES = {
 }
 
 os.makedirs(PHOTO_DIR, exist_ok=True)
+
+DEFAULT_LOCATION = {"latitude": 10.7735, "longitude": 76.3775}
+
+
+def load_location():
+    """Load the operator-selected location used by future camera reports."""
+    try:
+        with open(LOCATION_FILE, "r", encoding="utf-8") as file:
+            saved = json.load(file)
+        latitude = float(saved["latitude"])
+        longitude = float(saved["longitude"])
+        if -90 <= latitude <= 90 and -180 <= longitude <= 180:
+            return {"latitude": latitude, "longitude": longitude}
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return DEFAULT_LOCATION.copy()
+
+
+def save_location(latitude, longitude):
+    """Atomically save coordinates so the camera never reads a half-written file."""
+    location = {"latitude": latitude, "longitude": longitude}
+    temporary = LOCATION_FILE + ".tmp"
+    with open(temporary, "w", encoding="utf-8") as file:
+        json.dump(location, file, indent=2)
+    os.replace(temporary, LOCATION_FILE)
+    return location
 
 
 def read_setting(name):
@@ -97,6 +124,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/reports":
             reports = load_reports()
             self.reply(200, {"total": len(reports), "reports": reports[:MAX_REPORTS]})
+        elif path == "/api/location":
+            self.reply(200, load_location())
         elif path.startswith("/photos/"):
             self.send_file(PHOTO_DIR, path[len("/photos/"):], "public, max-age=86400")
         else:
@@ -124,6 +153,22 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/login":
             return self.reply(200, {"success": True})
+
+        if path == "/api/location":
+            try:
+                latitude = float(data.get("latitude"))
+                longitude = float(data.get("longitude"))
+            except (TypeError, ValueError):
+                return self.reply(400, {"success": False, "error": "Enter numbers for latitude and longitude"})
+            if not -90 <= latitude <= 90:
+                return self.reply(400, {"success": False, "error": "Latitude must be between -90 and 90"})
+            if not -180 <= longitude <= 180:
+                return self.reply(400, {"success": False, "error": "Longitude must be between -180 and 180"})
+            try:
+                location = save_location(latitude, longitude)
+            except OSError as error:
+                return self.reply(500, {"success": False, "error": f"Could not save location: {error}"})
+            return self.reply(200, {"success": True, **location})
 
         if path == "/api/delete":
             target = str(data.get("id"))

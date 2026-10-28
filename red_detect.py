@@ -18,7 +18,7 @@ import cv2
 import numpy as np
 
 # ==================================================
-# CAMERA, STORAGE AND MANUAL LOCATION
+# CAMERA AND STORAGE
 # ==================================================
 CAMERA = "/dev/video0"
 FRAME_WIDTH, FRAME_HEIGHT = 640, 480
@@ -28,9 +28,10 @@ BASE_DIR = os.path.expanduser("~/roadbot")
 PHOTO_DIR = os.path.join(BASE_DIR, "photos")
 os.makedirs(PHOTO_DIR, exist_ok=True)
 
-# Fixed example coordinates, NOT live GPS readings.
-LATITUDE = 10.7735
-LONGITUDE = 76.3775
+# The dashboard writes this file. It lets the operator change the manual
+# location without editing code or restarting this camera program.
+LOCATION_FILE = os.path.join(BASE_DIR, "location.json")
+DEFAULT_LOCATION = {"latitude": 10.7735, "longitude": 76.3775}
 
 # ==================================================
 # RED DETECTION SETTINGS
@@ -67,6 +68,20 @@ def last_report_id():
         except (OSError, ValueError, KeyError, TypeError):
             pass
     return max(ids, default=0)
+
+
+def current_location():
+    """Read the latest dashboard location for every newly saved report."""
+    try:
+        with open(LOCATION_FILE, "r", encoding="utf-8") as file:
+            saved = json.load(file)
+        latitude = float(saved["latitude"])
+        longitude = float(saved["longitude"])
+        if -90 <= latitude <= 90 and -180 <= longitude <= 180:
+            return {"latitude": latitude, "longitude": longitude}
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return DEFAULT_LOCATION.copy()
 
 
 # ==================================================
@@ -124,13 +139,14 @@ def capture_photo(frame, track, detection):
         print("PHOTO SAVE ERROR:", photo_path)
         return
 
+    location = current_location()
     report = {
         "id": next_report_id,
         "detection": LABEL,
         "object_id": track["id"],
         "photo_number": track["photos"] + 1,
-        "latitude": LATITUDE,
-        "longitude": LONGITUDE,
+        "latitude": location["latitude"],
+        "longitude": location["longitude"],
         "timestamp": now.isoformat(),
     }
     temp_path = os.path.join(PHOTO_DIR, stem + ".tmp")
@@ -254,7 +270,8 @@ def main():
     print("   ROADBOT DETECTION (local mode)")
     print("======================================")
     print("Photos:", PHOTO_DIR)
-    print("Manual location:", LATITUDE, LONGITUDE)
+    location = current_location()
+    print("Dashboard location:", location["latitude"], location["longitude"])
     print("Red hue: 0-%d and %d-179 | min area: %d" % (RED_HUE_LOW_MAX, RED_HUE_HIGH_MIN, MIN_RED_AREA))
     print("Stop with Ctrl+C")
     print("======================================\n")

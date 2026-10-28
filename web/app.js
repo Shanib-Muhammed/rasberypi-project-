@@ -14,6 +14,11 @@ const loginForm = $("#login-form");
 const passwordInput = $("#admin-password");
 const authStatus = $("#auth-status");
 const logoutButton = $("#logout-button");
+const locationSettings = $("#location-settings");
+const locationForm = $("#location-form");
+const latitudeInput = $("#latitude-input");
+const longitudeInput = $("#longitude-input");
+const locationStatus = $("#location-status");
 
 const STORAGE_KEY = "varodeAdmin";
 const REFRESH_MS = 5000;
@@ -31,8 +36,9 @@ function updateAuthUI() {
   const signedIn = Boolean(adminPassword);
   loginForm.hidden = signedIn;
   logoutButton.hidden = !signedIn;
+  locationSettings.hidden = !signedIn;
   authStatus.textContent = signedIn
-    ? "Signed in as administrator. Report deletion is enabled."
+    ? "Signed in as administrator. Report deletion and location settings are enabled."
     : "Viewing reports is public. Enter the administrator password only to manage reports.";
   document.querySelectorAll(".delete-button").forEach((button) => { button.hidden = !signedIn; });
 }
@@ -52,6 +58,39 @@ loginForm.addEventListener("submit", async (event) => {
     passwordInput.value = "";
   } catch (error) {
     authStatus.textContent = `Login failed: ${error.message}`;
+  }
+});
+
+async function loadLocation() {
+  try {
+    const response = await fetch("/api/location", { cache: "no-store" });
+    const location = await response.json();
+    if (!response.ok) throw new Error("Could not load location");
+    latitudeInput.value = location.latitude;
+    longitudeInput.value = location.longitude;
+    locationStatus.textContent = `Current location: ${location.latitude}, ${location.longitude}. New reports will use it.`;
+  } catch {
+    locationStatus.textContent = "Could not load the saved location from the Raspberry Pi.";
+  }
+}
+
+locationForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  locationStatus.textContent = "Saving location…";
+  try {
+    const response = await fetch("/api/location", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Password": adminPassword },
+      body: JSON.stringify({ latitude: latitudeInput.value, longitude: longitudeInput.value })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (response.status === 401) saveAdmin("");
+    if (!response.ok || !result.success) throw new Error(result.error || `Request failed (${response.status})`);
+    latitudeInput.value = result.latitude;
+    longitudeInput.value = result.longitude;
+    locationStatus.textContent = `Saved. Every new report will use ${result.latitude}, ${result.longitude}.`;
+  } catch (error) {
+    locationStatus.textContent = `Location was not saved: ${error.message}`;
   }
 });
 
@@ -182,5 +221,6 @@ async function loadReports(force = false) {
 
 refreshButton.addEventListener("click", () => loadReports(true));
 updateAuthUI();
+loadLocation();
 loadReports(true);
 window.setInterval(() => loadReports(), REFRESH_MS);

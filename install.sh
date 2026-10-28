@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # VARODE RoadBot installer for Raspberry Pi OS.
 #
-#   bash install.sh               install only
-#   bash install.sh --autostart   install AND start automatically on every boot
+#   bash install.sh
+#
+# It installs everything, starts the dashboard and camera immediately, and
+# starts both automatically after every Raspberry Pi reboot.
 #
 # Run it as your normal user (NOT with sudo). It asks for sudo when needed.
 set -e
@@ -56,25 +58,16 @@ EOF
 }
 
 echo
-if [ "$1" = "--autostart" ]; then
-  echo "== 4/4  Setting up start-on-boot =="
-  make_service roadbot-web server.py
-  make_service roadbot-camera red_detect.py
-  sudo systemctl daemon-reload
-  sudo systemctl enable --now roadbot-web roadbot-camera
-  echo "Both programs are running and will start on every boot."
-else
-  echo "== 4/4  Start-on-boot skipped (add it later with: bash install.sh --autostart) =="
-fi
+echo "== 4/4  Starting RoadBot now and on every boot =="
+make_service roadbot-web server.py
+make_service roadbot-camera red_detect.py
+sudo systemctl daemon-reload
+sudo systemctl enable --now roadbot-web roadbot-camera
+echo "Both programs are running and will start on every boot."
 
 echo
 echo "=============================================="
 echo " Install finished."
-if [ "$1" != "--autostart" ]; then
-  echo " Start it by hand in two terminals:"
-  echo "   python3 ~/roadbot/server.py"
-  echo "   python3 ~/roadbot/red_detect.py"
-fi
 echo " Open the dashboard from a phone/laptop on the same Wi-Fi:"
 for ip in $(hostname -I 2>/dev/null); do
   case "$ip" in *.*) echo "   http://$ip:8000" ;; esac

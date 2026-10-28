@@ -8,7 +8,7 @@ A Raspberry Pi with a USB webcam watches a miniature road, takes a photo when it
 and open the dashboard in any browser. Weak or missing internet can no longer stop photos from appearing.
 
 > **Honest status:** this is a school prototype. It detects the *colour red*, not real cracks, and it uses
-> *fixed* GPS coordinates, not a live GPS module. See [Limitations](#limitations).
+> manually set coordinates, not a live GPS module. Change them in **Dashboard administrator → Location settings**. See [Limitations](#limitations).
 
 ---
 
@@ -39,10 +39,10 @@ and open the dashboard in any browser. Weak or missing internet can no longer st
 3. **Tracking:** a detection must appear in 3 frames before a photo is taken. Each red mark gets at most
    2 photos. A mark that leaves the camera view is forgotten after 1.5 seconds, so the *next* red mark is always treated as new.
 4. **Saving:** the photo (with a green box and the label `CRACK DETECTED`) and a small report file
-   (id, time, latitude, longitude) are saved on the Pi.
+   (id, time, latitude, longitude) are saved on the Pi. Each new report uses the location selected in dashboard settings.
 5. **Dashboard:** `server.py` serves the website. The page asks the server for reports every 5 seconds and shows
    the photo, time and coordinates. Click a photo to enlarge it.
-6. **Admin:** reports are public to view. An administrator password is needed only to **delete** a report.
+6. **Admin:** reports are public to view. An administrator password is needed to delete reports or change the location for future reports.
 
 ---
 
@@ -69,7 +69,7 @@ The server uses only the Python standard library.
 | `red_detect.py` | Camera program: detects red, takes photos, saves reports. `--calibrate` helps tune the colour. |
 | `server.py` | Web server: shows the dashboard and the saved reports (port 8000). |
 | `web/index.html`, `web/style.css`, `web/app.js` | The dashboard website. |
-| `install.sh` | One-command installer (packages, folders, admin password, optional start-on-boot). |
+| `install.sh` | One-command installer (packages, folders, admin password, automatic start-on-boot). |
 | `.gitignore` | Keeps photos and passwords out of GitHub. |
 
 After installing, everything lives in `~/roadbot/` on the Pi (photos are in `~/roadbot/photos/`).
@@ -99,12 +99,7 @@ cd rasberypi-project-
 bash install.sh
 ```
 
-The installer asks you to choose an **admin password** (used only to delete reports).
-To make the system **start by itself every time the Pi turns on**, run it with the extra option instead:
-
-```bash
-bash install.sh --autostart
-```
+The installer asks you to choose an **admin password**, starts the camera and dashboard immediately, and makes both start automatically every time the Pi turns on. At the end it prints the local dashboard URL, for example `http://192.168.43.25:8000`.
 
 ### Step 3 – Check the webcam
 
@@ -119,14 +114,7 @@ You should see `/dev/video0`. If not, check the USB cable and try another USB po
 
 ## Run it
 
-**If you used `--autostart`:** nothing to do – power on the Pi and wait about a minute.
-
-**Otherwise,** open two terminals (or two SSH windows) on the Pi:
-
-```bash
-python3 ~/roadbot/server.py        # window 1 – the website
-python3 ~/roadbot/red_detect.py    # window 2 – the camera
-```
+After installation, nothing else is needed – power on the Pi and wait about a minute. The dashboard and camera services start automatically.
 
 Window 1 prints the address, for example:
 
@@ -148,8 +136,8 @@ Press **Ctrl+C** in each window to stop.
 
 - **Reports** appear automatically, newest first. The top cards show the total number and the latest report time.
 - **Click a photo** to open it full size. Press `Esc` or click outside to close.
-- **Delete a report:** enter the admin password in *Dashboard administrator*, then press **Delete report** on a card.
-  This removes the photo and its record from the Pi.
+- **Delete a report:** enter the admin password in *Dashboard administrator*, then press **Delete report** on a card. This removes the photo and its record from the Pi.
+- **Change future report coordinates:** after signing in, open **Location settings**, enter the latitude and longitude, then select **Save location**. The camera reads the new location automatically for every next report; no code change or restart is needed.
 - The **Google Maps link** needs internet. The coordinates are always shown.
 
 ---
@@ -184,7 +172,7 @@ Settings are at the top of `red_detect.py` (edit `~/roadbot/red_detect.py` on th
 | `STABLE_FRAMES` | Frames a mark must be seen before a photo | 3 |
 | `MAX_PHOTOS_PER_OBJECT` | Photos per red mark | 2 |
 | `TRACK_FORGET_SECONDS` | Forget a mark after it leaves view | 1.5 |
-| `LATITUDE`, `LONGITUDE` | Fixed location written in each report | 10.7735, 76.3775 |
+| Dashboard Location settings | Manual location written in each new report | 10.7735, 76.3775 |
 | `LOCK_WHITE_BALANCE` | Stop the camera shifting colours (not every webcam supports it) | False |
 
 The dashboard port (`PORT = 8000`) is at the top of `server.py`.
@@ -193,7 +181,7 @@ The dashboard port (`PORT = 8000`) is at the top of `server.py`.
 
 ## Managing the auto-start services
 
-Only if you installed with `--autostart`:
+The installer enables these services automatically:
 
 ```bash
 sudo systemctl status roadbot-web roadbot-camera     # are they running?
@@ -208,7 +196,7 @@ journalctl -u roadbot-camera -f                      # live messages from the ca
 ```bash
 cd ~/rasberypi-project-
 git pull
-bash install.sh          # or: bash install.sh --autostart
+bash install.sh
 ```
 
 ---
@@ -241,8 +229,7 @@ bash install.sh          # or: bash install.sh --autostart
 
 - **Colour detection only.** The robot looks for red paint/tape, not real cracks. Real roads would need a trained model
   (for example a neural network trained on crack photos).
-- **Fixed location.** Latitude/longitude are typed in the code. Live GPS (for example a NEO-6M module) needs serial reading
-  and parsing code that is not written yet.
+- **Manual location, not live GPS.** Latitude/longitude are chosen in dashboard settings. Live GPS (for example a NEO-6M module) needs serial reading and parsing code that is not written yet.
 - **Local only.** Reports stay on the Pi's SD card. There is no cloud copy.
 
 ## Ideas for the future
