@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Varode road monitoring dashboard with photo evidence and mapped report locations.">
+  <title>VARODE | Road Monitor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Varode Road Monitor home"><span class="brand-mark">V</span><span>VARODE<span class="brand-light"> / ROAD MONITOR</span></span></a>
+    <span class="status"><span class="status-dot"></span> Live dashboard</span>
+  </header>
+  <main class="container">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">ROAD INTELLIGENCE SYSTEM</p>
+        <h1>Safer roads start<br><span>with better data.</span></h1>
+        <p class="intro">A clear view of field reports captured by the Varode robot, with photo evidence, coordinates and direct map links.</p>
+        <div class="hero-note"><span class="hero-note-icon">↗</span> Photo evidence · GPS coordinates · Report history</div>
+      </div>
+      <div class="hero-art" aria-hidden="true"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-road"><span></span><span></span><span></span></div><div class="art-pin">⌖</div></div>
+    </section>
+    <section class="stats" aria-label="Report summary">
+      <article class="stat-card"><span class="stat-label">TOTAL REPORTS</span><strong id="total-count">—</strong><span class="stat-foot">Reports saved on the Raspberry Pi</span></article>
+      <article class="stat-card"><span class="stat-label">LATEST REPORT</span><strong id="latest-date" class="stat-small">Waiting for data</strong><span class="stat-foot">Most recent detection time</span></article>
+      <article class="stat-card"><span class="stat-label">DASHBOARD STATUS</span><strong class="stat-small"><span class="status-dot"></span> Online</strong><span class="stat-foot">Auto-refresh every 5 seconds</span></article>
+    </section>
+    <section class="admin-login" aria-labelledby="admin-heading">
+      <div><p class="eyebrow">ADMIN ACCESS</p><h2 id="admin-heading">Dashboard administrator</h2><p class="section-subtitle">Reports are public. Enter the administrator password to enable admin actions.</p></div>
+      <form id="login-form" class="login-form"><label for="admin-password">Administrator password</label><input id="admin-password" type="password" autocomplete="current-password" required placeholder="Enter VARODE admin password"><button class="refresh-button" type="submit">Admin sign in</button></form>
+      <div id="auth-status" class="auth-status" role="status">Viewing reports is public. Enter the administrator password only to manage reports.</div>
+      <button id="logout-button" class="refresh-button logout-button" type="button" hidden>Sign out</button>
+    </section>
+    <section class="reports-section">
+      <div class="section-head">
+        <div><p class="eyebrow">FIELD DATA</p><h2>Detection reports</h2><p class="section-subtitle">Open any image for a closer look. Use the map link to view the reported coordinates.</p></div>
+        <button id="refresh-button" class="refresh-button" type="button">↻ Refresh reports</button>
+      </div>
+      <div id="message" class="message" role="status">Connecting to the Raspberry Pi…</div>
+      <div id="reports" class="reports-grid"></div>
+    </section>
+    <footer><span>VARODE SCHOOL PROJECT</span><span class="footer-dot">·</span> Road monitoring prototype</footer>
+  </main>
+  <dialog id="photo-modal" class="photo-modal" aria-label="Report photo viewer">
+    <div class="modal-top"><p id="modal-caption">Report photo</p><button id="modal-close" class="modal-close" type="button" aria-label="Close photo">✕</button></div>
+    <img id="modal-image" alt="Expanded report photo">
+    <p class="modal-hint">Press Escape or click outside the image to close.</p>
+  </dialog>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
